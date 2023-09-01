@@ -1,0 +1,27 @@
+import hudson.markup.RawHtmlMarkupFormatter
+stage('Generate and publish report') {
+                    currentBuild.result = hudson.model.Result.SUCCESS.toString()
+                    sh "chmod +x ${WORKSPACE}/scripts_report/generate_build_info_report.py"
+                    sh "${WORKSPACE}/scripts_report/generate_build_info_report.py -lr ${RESULT_JOBS_LIST.join('')} -lrp ${RESULT_JOBS_LIST_PARAMS.join('')} -ju ${JENKINS_URL}"
+                    rtp stableText: '${FILE:report.html}', parserName: "HTML", unstableAsStable: true, failedAsStable: true, abortedAsStable: true
+                }
+stage('Update job description') {
+                    Jenkins.instance.setMarkupFormatter(new RawHtmlMarkupFormatter(false))
+                    def jenkins = Jenkins.getInstanceOrNull()
+                    if (jenkins) {
+                       // def myJob = Jenkins.instance.getItemByFullName("${env.JOB_NAME}")
+                       def myJob = "${env.JOB_NAME}"
+                       echo "myJob = ${myJob}"
+                       def description = """
+                           <h1>Welcome to Jenkins job</h1>
+                           <h3>To view the current report of the last build run, follow the link below:
+                           <ul><li><a href='/job/${env.BUILD_NUMBER}'>Current report</a></li></ul></h3>
+                           <h3>To restart some components please follow the link below:
+                           <ul><li><a href='/job/'>Jenkins job</a></li></ul></h3>
+                       """
+                       myJob.setDescription(description)
+                       myJob.save()
+                    } else {
+                        echo "Jenkins instance does not exist"
+                    }
+                }
